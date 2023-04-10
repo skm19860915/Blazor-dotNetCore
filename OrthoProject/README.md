@@ -15,7 +15,7 @@ The repo is divided into 3 decoupled areas: <br/>
 
 Users should ensure they have access to appropriate AWS resources to deploy to Elastic Beanstalk and access the RDS PostgreSQL database.
 ##Link to AWS setup information:
-https://mosimtec.egnyte.com/fl/v1lpc6KmU3 <br/>
+https://mosimtec.egnyte.com/fl/v1lpc6KmU3 <br/> 
 Password: VaX2prK7
 
 ##Key AWS Assets
