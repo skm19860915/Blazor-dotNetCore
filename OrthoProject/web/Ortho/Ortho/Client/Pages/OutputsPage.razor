@@ -1,0 +1,23 @@
+﻿@page "/outputs/{ScenarioId}"
+@implements IDisposable
+@inject StateContainer StateContainer
+
+<h3>OutputsPage</h3>
+
+@code {
+    [Parameter]
+    public string ScenarioId{ get; set; }
+
+    protected override void OnInitialized()
+    {
+        StateContainer.ActiveNavBar = true;
+        StateContainer.AuthenticationVerified = true;
+        StateContainer.ScenarioId = ScenarioId;
+        StateContainer.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+}

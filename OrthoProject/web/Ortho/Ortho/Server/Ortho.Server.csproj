@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EntityFramework6.Npgsql" Version="6.4.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="5.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0-preview.1.21102.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.0-preview1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\Ortho.Client.csproj" />
+    <ProjectReference Include="..\Shared\Ortho.Shared.csproj" />
+  </ItemGroup>
+
+
+</Project>

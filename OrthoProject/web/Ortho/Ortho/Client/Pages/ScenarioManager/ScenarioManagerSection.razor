@@ -1,0 +1,221 @@
+﻿@using Ortho.Shared.ViewModels
+@using Ortho.Shared.Models
+@using Ortho.Shared.Mappings
+@using Ortho.Shared.Enums
+@inject NavigationManager NavigationManager
+@implements IDisposable
+@inject StateContainer StateContainer
+
+<style>
+    .dxbs-cmd-cell button{
+        color: #212529 !important;
+    }
+    .dxbs-fl-ctrl button{
+        color: #212529 !important;
+    }
+    .status-btn, .action-btn{
+        font-size: 20px !important;
+    }
+    .action-btn:hover{
+        color: #007bff !important;
+    }
+    .grid-header-template.card-header{
+        background-color: white !important;
+    }
+    .table-active.bg-primary{
+        background-color: gray !important;
+    }
+    .modal-header.card-header{
+       background-color: rgba(34,34,34,.03) !important;
+       padding: 0.5rem 1rem !important;
+    }
+    .manager-datagrid tr.dxbs-filter-row td:nth-child(8) div.dxbs-input-group{
+        display: none;
+    }
+    .manager-datagrid tr.dxbs-filter-row td div.dxbs-input-group.dx-listbox input{
+        background-color: white;
+    }
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <div>
+            <DxDataGrid Data="@ScenarioList" @ref="ScenarioListGrid" 
+                KeyFieldName="@nameof(ScenarioManagerViewModel.Id)"
+                PageSize="5" CssClass="manager-datagrid"
+                ShowFilterRow="@IsShowingFilterRow" >
+                <DxDataGridColumn Field="@nameof(ScenarioManagerViewModel.Customer)" Caption="Customer" />
+                <DxDataGridColumn Field="@nameof(ScenarioManagerViewModel.ScenarioNickName)" Caption="Scenario Name" />
+                <DxDataGridColumn Field="@nameof(ScenarioManagerViewModel.Number)" Caption="ID" />
+                <DxDataGridDateEditColumn Field="@nameof(ScenarioManagerViewModel.CreationDate)" Caption="Creation Date" />
+                <DxDataGridComboBoxColumn Field="@nameof(ScenarioManagerViewModel.OwnerId)" Caption="Owner" 
+                    ValueFieldName="Id" TextFieldName="Name"
+                    Data="@AppUserList" />
+                <DxDataGridComboBoxColumn Field="@nameof(ScenarioManagerViewModel.TypeId)" Caption="Type" 
+                    ValueFieldName="scenarioTypeId" TextFieldName="scenarioType"
+                    Data="@ConfigScenarioTypeList" />
+                <DxDataGridComboBoxColumn Field="@nameof(ScenarioManagerViewModel.Status)" Caption="Status" 
+                    ValueFieldName="Id" TextFieldName="Name"
+                    Data="@ScenarioStatusList">
+                    <DisplayTemplate>
+                        @{
+                            var status = (context as ScenarioManagerViewModel).Status;
+                            switch (status)
+                            {
+                                case ScenarioStatus.InProgress:
+                                    <span class="mx-1 status-btn"><i class="far fa-exclamation-triangle"></i></span>
+                                    break;
+                                case ScenarioStatus.RunComplete:
+                                    <span class="mx-1 status-btn"><i class="far fa-check-square"></i></span>
+                                    break;
+                                case ScenarioStatus.Published:
+                                    <span class="mx-1 status-btn"><i class="far fa-lock-alt"></i></span>
+                                    break;
+                            }
+                        }
+                    </DisplayTemplate>
+                </DxDataGridComboBoxColumn>
+                <DxDataGridColumn Field="@nameof(ScenarioManagerViewModel.Id)" Caption="Action" AllowSort="false">  
+                    <DisplayTemplate>
+                        @{
+                            var id = (context as ScenarioManagerViewModel).Id;
+                            switch (CurrentSceanrioState)
+                            {
+                                case ScenarioState.Active:
+                                    <div>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnEditClick(id); })">
+                                            <i class="fas fa-pencil"></i>
+                                        </span>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnSendClickAsync(id); })">
+                                            <i class="fas fa-send-backward">
+                                        </i></span>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnTransferClickAsync(id); })">
+                                            <i class="far fa-play"></i>
+                                        </span>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnExternalClickAsync(id); })">
+                                            <i class="fas fa-external-link"></i>
+                                        </span>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnRemoveClickAsync(id); })">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </span>
+                                    </div>
+                                    break;
+                                case ScenarioState.Archived:
+                                    <div>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnUndoClickAsync(id); })">
+                                            <i class="fas fa-undo"></i>
+                                        </span>
+                                        <span class="mx-1 action-btn" @onclick="@(() => { OnDeleteClick(id); })">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </span>
+                                    </div>
+                                    break;
+                                case ScenarioState.Deleted:
+                                    break;
+                            }
+                        }
+                    </DisplayTemplate>
+                </DxDataGridColumn>
+                <DxDataGridColumn Field="@nameof(ScenarioManagerViewModel.State)" Visible="false" Caption="State" />
+            </DxDataGrid>
+        </div>
+    </div>
+</div>
+<DxPopup
+    @bind-Visible="@DeletePopupVisible"
+    ShowFooter="true" HeaderText="Warning" CssClass="delete-popup-header">
+    <BodyTemplate><span class="m-3">This will permanently delete the scenario. Do you want to continue?</span></BodyTemplate>
+    <FooterContentTemplate>
+        <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="OK" Click="@(() => Delete())"/>
+        <DxButton RenderStyle="ButtonRenderStyle.Secondary" Text="Cancel" Click="@(() => DeletePopupVisible = false)"/>
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    [Parameter]
+    public ScenarioState CurrentSceanrioState { get; set; }
+    [Parameter]
+    public IEnumerable<ScenarioManagerViewModel> ScenarioList { get; set; }
+    [Parameter]
+    public IEnumerable<ConfigScenarioType> ConfigScenarioTypeList { get; set; }
+    [Parameter]
+    public IEnumerable<AppUserViewModel> AppUserList { get; set; }
+    [Parameter]
+    public EventCallback<int> EditSelectedScenarioCallback { get; set; }
+    [Parameter]
+    public EventCallback<int> RemoveSelectedScenarioCallback { get; set; }
+    [Parameter]
+    public EventCallback<int> UndoSelectedScenarioCallback { get; set; }
+    [Parameter]
+    public EventCallback<int> DeleteSelectedScenarioCallback { get; set; }
+    [Parameter]
+    public bool IsShowingFilterRow { get; set; }
+    DxDataGrid<ScenarioManagerViewModel> ScenarioListGrid;
+    bool ShowFilterRow = false;
+    public List<ScenarioStatusViewModel> ScenarioStatusList { get; set; } = new();
+    private bool DeletePopupVisible { get; set; }
+    private int DeleteScenarioId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        StateContainer.OnChange += StateHasChanged;
+        foreach(var item in Enum.GetValues(typeof(ScenarioStatus)))
+        {
+            var record = new ScenarioStatusViewModel
+                {
+                    Id = (int)item,
+                    Name = item.ToString()
+                };
+            ScenarioStatusList.Add(record);
+        }
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+
+    private void OnShowFilterRow(ToolbarItemClickEventArgs e) 
+    {
+        ShowFilterRow = !ShowFilterRow;
+    }
+
+    private async void OnEditClick(int id)
+    {
+        await EditSelectedScenarioCallback.InvokeAsync(id);
+    }
+
+    private async Task OnSendClickAsync(int id)
+    {
+    }
+
+    private async Task OnTransferClickAsync(int id)
+    {
+    }
+
+    private async Task OnExternalClickAsync(int id)
+    {
+    }
+
+    private async void OnRemoveClickAsync(int id)
+    {
+        await RemoveSelectedScenarioCallback.InvokeAsync(id);
+    }
+
+    private async void OnUndoClickAsync(int id)
+    {
+        await UndoSelectedScenarioCallback.InvokeAsync(id);
+    }
+
+    private void OnDeleteClick(int id)
+    {
+        DeletePopupVisible = true;
+        DeleteScenarioId = id;
+    }
+
+    private async void Delete()
+    {
+        DeletePopupVisible = false;
+        await DeleteSelectedScenarioCallback.InvokeAsync(DeleteScenarioId);
+    }
+}

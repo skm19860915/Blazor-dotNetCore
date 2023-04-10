@@ -1,0 +1,170 @@
+﻿@page "/demand-inputs/{ScenarioId}"
+@using Ortho.Client.Data.Services.DemandInputs
+@using Ortho.Client.Pages.DemandInputs
+@using Ortho.Shared.Models
+@using Ortho.Shared.ViewModels
+@inject IPanelServices services
+@inject IStringLocalizer<Language> Localizer
+@implements IDisposable
+@inject StateContainer StateContainer
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject NavigationManager NavigationManager
+
+<div class="accordion" id="demandInputsGroup">
+    <div class="card main-panel">
+        <div class="card-header" id="headingPanel">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link" type="button" data-toggle="collapse"
+                        data-target="#collapsePanel" aria-expanded="true" aria-controls="collapsePanel">
+                    @Localizer["Panels"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapsePanel" class="collapse show" aria-labelledby="headingPanel" data-parent="#demandInputsGroup">
+            <div class="card-body">
+                <PanelSection
+                AppUserId="@AppUserId"
+                PermanentPanelList="@PermanentPanels"
+                UserDefinedPanelList="@UserDefinedPanels"
+                DeleteSelectedPanelCallback="DeleteSelectedPanelAsync"
+                SaveSelectedPanelCallback="SaveSelectedPanelAsync"
+                AllAssayList="@AllAssays"/>
+            </div>
+        </div>
+    </div>
+    <br /><br />
+    <div class="card main-panel">
+        <div class="card-header" id="headingLISFile">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link collapsed" type="button" data-toggle="collapse"
+                        data-target="#collapseLISFile" aria-expanded="false" aria-controls="collapseLISFile">
+                    @Localizer["LIS File Selection and Column Mapping"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseLISFile" class="collapse" aria-labelledby="headingLISFile" data-parent="#demandInputsGroup">
+            <div class="card-body">
+                <LISFileSection ScenarioId="@ScenarioId" /><br />
+            </div>
+        </div>
+    </div>
+    <br /><br />
+    <div class="card main-panel">
+        <div class="card-header" id="headingAssayMapping">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link collapsed" type="button" data-toggle="collapse"
+                        data-target="#collapseAssayMapping" aria-expanded="false" aria-controls="collapseAssayMapping">
+                    @Localizer["Assay Mapping"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseAssayMapping" class="collapse" aria-labelledby="headingAssayMapping" data-parent="#demandInputsGroup">
+            <div class="card-body">
+                <AssayMappingSection></AssayMappingSection>
+            </div>
+        </div>
+    </div>
+    <br /><br />
+    <div class="card main-panel">
+        <div class="card-header" id="headingArrival">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link collapsed" type="button" data-toggle="collapse"
+                        data-target="#collapseArrival" aria-expanded="false" aria-controls="collapseArrival">
+                    @Localizer["Arrival Time Adjustments"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseArrival" class="collapse" aria-labelledby="headingArrival" data-parent="#demandInputsGroup">
+            <div class="card-body">
+                Coming Soon.......
+            </div>
+        </div>
+    </div>
+    <br /><br />
+    <div class="card main-panel">
+        <div class="card-header" id="headingDemand">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link collapsed" type="button" data-toggle="collapse"
+                        data-target="#collapseDemand" aria-expanded="false" aria-controls="collapseDemand">
+                    @Localizer["Demand Summary and Growth"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseDemand" class="collapse" aria-labelledby="headingDemand" data-parent="#demandInputsGroup">
+            <div class="card-body">
+                Coming Soon.......
+            </div>
+        </div>
+    </div>
+    <br /><br />
+    <div class="card main-panel">
+        <div class="card-header" id="headingSimulation">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link collapsed" type="button" data-toggle="collapse"
+                        data-target="#collapseSimulation" aria-expanded="false" aria-controls="collapseSimulation">
+                    @Localizer["Additional Simulation Inputs"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseSimulation" class="collapse" aria-labelledby="headingSimulation" data-parent="#demandInputsGroup">
+            <div class="card-body">
+                Coming Soon.......
+            </div>
+        </div>
+    </div>
+    <br /><br />
+</div>
+
+@code{
+    [Parameter]
+    public string ScenarioId{ get; set; }
+    List<PanelViewModel> PermanentPanels { get; set; } = new();
+    List<PanelViewModel> UserDefinedPanels { get; set; } = new();
+    List<PanelAssayViewModel> AllAssays { get; set; } = new();
+    int AppUserId { get; set; }
+    List<DemandLISFile> DemandLISFiles { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        StateContainer.ActiveNavBar = true;
+        StateContainer.AuthenticationVerified = true;
+        StateContainer.ScenarioId = ScenarioId;
+        StateContainer.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppUserId = await sessionStorage.GetItemAsync<int>("APP_USER");
+        var permanentPanels = await services.GetPermanentPanelsAsync();
+        PermanentPanels = permanentPanels.ToList();
+        var userDefinedPanels = await services.GetUserDefinedPanelsAsync(AppUserId);
+        UserDefinedPanels = userDefinedPanels.ToList();
+        var allAssays = await services.GetAllAssaysAsync();
+        AllAssays = allAssays.ToList();
+    }
+
+    private async Task DeleteSelectedPanelAsync(int id)
+    {
+        var success = await services.DeletePanelAsync(id);
+        if (!success)
+            return;
+
+        var userDefinedPanels = await services.GetUserDefinedPanelsAsync(AppUserId);
+        UserDefinedPanels = userDefinedPanels.ToList();
+    }
+
+    private async Task SaveSelectedPanelAsync(PanelViewModel panelViewModel)
+    {
+        var success = await services.UpdatePanelAsync(panelViewModel);
+        if (!success)
+            return;
+
+        var userDefinedPanels = await services.GetUserDefinedPanelsAsync(AppUserId);
+        UserDefinedPanels = userDefinedPanels.ToList();
+    }
+}

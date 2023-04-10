@@ -1,0 +1,21 @@
+﻿@typeparam T
+@using Ortho.Client.Data.Services.DemandInputs
+@using Ortho.Shared.Enums
+@inject ILISFileServices services
+
+<div draggable="true" @ondragstart="@OnDragStart">
+    @ChildContent
+</div>
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    [Parameter]
+    public ConfigLisField Zone { get; set; }
+    [Parameter]
+    public string Data { get; set;}
+
+    private void OnDragStart()
+    {
+        services.StartDrag(Data, Zone);
+    }
+}

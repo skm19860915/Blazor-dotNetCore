@@ -1,0 +1,168 @@
+﻿@using Ortho.Client.Data.Services.DemandInputs
+@using Ortho.Client.Data.Services.ScenarioDefinition
+@using Ortho.Client.Data.Services.ScenarioManager
+@using Ortho.Shared.Enums
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject StateContainer StateContainer
+@inject NavigationManager NavigationManager
+@inject IScenarioServices scenarioServices
+@inject IJSRuntime JSRuntime
+
+@if (StateContainer.ActiveNavBar)
+{
+    <div class="sidebar">
+        <NavMenu
+        ScenarioId="@StateContainer.ScenarioId"
+        CheckChangedCallback="CheckChangedForSaving"
+        />
+    </div>
+}
+
+<div class="main">
+    <div class="top-row px-4" style="z-index:100;">
+        <img src="/css/images/header.png" style="position: absolute; left: 0; top: 8px;" />
+        <h1 style="position: absolute; top: 22px; left: 280px; color: #4e4c4c; font-size:37px;">Clinical Chemistry Simulator</h1>
+        <h1 style="position: absolute; top: 22px; font-size: 37px; color: #c73043;">Ortho Clinical Diagnostics</h1>
+        @if(StateContainer.AuthenticationVerified)
+        {
+            <ul class="header-menu">
+                @if (StateContainer.AuthenticationVerified)
+                {
+                    <li class="header-menu-item">
+                        <button class="btn" @onclick="GoToMainPage"><i class="fas fa-home"></i></button>
+                    </li>
+                    <li class="header-menu-item">
+                        <button class="btn"><i class="fas fa-user" style="font-size:22px !important;"></i></button>
+                    </li>
+                    <li class="header-menu-item">
+                        <button class="btn"><i class="fas fa-th" style="font-size:23px !important; padding-top:3px;"></i></button>
+                    </li>
+                    <li class="header-menu-item">
+                        <button class="btn"><i class="fas fa-question" style="padding-top:3px;"></i></button>
+                    </li>
+                    <li class="header-menu-item 
+                        @(StateContainer.ScenarioDefinitionChanged == true 
+                        ? "save-changed" : "")">
+                        <button class="btn" @onclick="SavePageChanged"><i class="fas fa-save" style="padding-top:3px;"></i></button>
+                    </li>
+                }
+                <li class="header-menu-item">
+                    <button class="btn"><i class="fas fa-sign-out" style="padding-top:3px;"></i></button>
+                </li>
+                 <li class="header-menu-item">
+                    <CultureSelector />
+                </li>
+            </ul>    
+        }
+    </div>
+    <div class="content px-4" style="@(StateContainer.ActiveNavBar == true ? "padding-left:300px !important" : "")">
+        @Body
+    </div> 
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        StateContainer.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+
+    private void GoToMainPage()
+    {
+        var path = "/manager";
+        ProcessChanged(path);
+    }
+
+    private async void ProcessChanged(string path)
+    {
+        if (StateContainer.ScenarioDefinitionChanged)
+        {
+            var alertDescription = "Scenario has not been created. Do you wish to save changes before continuing?";
+            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", alertDescription);
+            if (confirmed)
+            {
+                var success = await SavePageChanged();
+                if (!success)
+                    return;
+            }
+        }
+
+        ClearStateContainerForScenario();
+        NavigationManager.NavigateTo(path);
+    }
+
+    private async Task<bool> SavePageChanged()
+    {
+        if (StateContainer.ScenarioDefinitionChanged)
+        {
+            var definitionObj = StateContainer.ScenarioDefinitionObj;
+            bool valid = CheckValidation();
+            if (!valid)
+                return false;
+
+            var saved = await scenarioServices.SaveActionAsync(definitionObj);
+            ClearStateContainerForScenario();
+            return saved;
+        }
+
+        return true;
+    }
+
+    private bool CheckValidation()
+    {
+        var nickName = StateContainer.ScenarioDefinitionObj.NickName;
+        if (string.IsNullOrEmpty(nickName))
+            StateContainer.EmptyScenarioNickName = true;
+        var description = StateContainer.ScenarioDefinitionObj.Description;
+        if (string.IsNullOrEmpty(description))
+            StateContainer.EmptyScenarioDescription = true;
+        var sfdcNumber = StateContainer.ScenarioDefinitionObj.SfdcNumber;
+        if (string.IsNullOrEmpty(sfdcNumber))
+            StateContainer.EmptySFDCNumber = true;
+        var customerName = StateContainer.ScenarioDefinitionObj.CustomerName;
+        if (string.IsNullOrEmpty(customerName))
+            StateContainer.EmptyCustomerName = true;
+        var city = StateContainer.ScenarioDefinitionObj.City;
+        if (string.IsNullOrEmpty(city))
+            StateContainer.EmptyCity = true;
+        var state = StateContainer.ScenarioDefinitionObj.State;
+        if (string.IsNullOrEmpty(state))
+            StateContainer.EmptyStateProvince = true;
+        var country = StateContainer.ScenarioDefinitionObj.Country;
+        if (string.IsNullOrEmpty(country))
+            StateContainer.EmptyCountry = true;
+
+        if (StateContainer.EmptyScenarioNickName || 
+            StateContainer.EmptyScenarioDescription || 
+            StateContainer.EmptySFDCNumber ||
+            StateContainer.EmptyCustomerName ||
+            StateContainer.EmptyCity ||
+            StateContainer.EmptyStateProvince ||
+            StateContainer.EmptyCountry)
+            return false;
+
+        return true;
+    }
+
+    private void ClearStateContainerForScenario()
+    {
+        StateContainer.ScenarioDefinitionChanged = false;
+        StateContainer.EmptyScenarioNickName = false;
+        StateContainer.EmptyScenarioDescription = false;
+        StateContainer.EmptySFDCNumber = false;
+        StateContainer.EmptyCustomerName = false;
+        StateContainer.EmptyCity = false;
+        StateContainer.EmptyStateProvince = false;
+        StateContainer.EmptyCountry = false;
+    }
+
+    private void CheckChangedForSaving(string path)
+    {
+        ProcessChanged(path);
+    }
+}

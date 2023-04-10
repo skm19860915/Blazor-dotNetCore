@@ -1,0 +1,144 @@
+﻿@using Ortho.Shared.ViewModels
+@using Ortho.Shared.Models
+@inject StateContainer StateContainer
+
+<div class="row">
+    <div class="col-sm-6">
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label for="scenario type">Scenario Type:</label>
+                    <DxTextBox @bind-Text="ScenarioDataForDefinition.ScenarioType" ReadOnly="true" />
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label for="creation date">Creation Date:</label>
+                    <DxTextBox @bind-Text="ScenarioDataForDefinition.CreationDate" ReadOnly="true" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="row">
+            <div class="col-12">
+                <div class="form-group">
+                    <label for="created by">Created By:</label>
+                    <DxTextBox @bind-Text="ScenarioDataForDefinition.Creator" ReadOnly="true" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label for="current owner">Current Owner:</label>
+            <DxTextBox @bind-Text="ScenarioDataForDefinition.Owner" ReadOnly="true" />
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label for="title of current owner">Title Of Current Owner:</label>
+            <DxTextBox @bind-Text="ScenarioDataForDefinition.OwnerTitle" ReadOnly="true" />
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label for="scenario nickname">Scenario Nickname:</label>
+            <input type="text" @bind-value="ScenarioDataForDefinition.NickName" 
+            class="form-control form-control-sm @(StateContainer.EmptyScenarioNickName == true ? "is-invalid" : "")" 
+            @oninput="GetChangedNickName" />
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label for="scenario description">Scenario Description/Notes:</label>
+            <textarea @bind="ScenarioDataForDefinition.Description" @oninput="GetChangedDescription" rows="5" 
+            class="form-control @(StateContainer.EmptyScenarioDescription == true ? "is-invalid" : "")"  />
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-6">
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label for="mode">Mode:</label>
+                    <div class="border border-secondary rounded">
+                        <h6 for="practice" class="m-2">
+                            <input type="radio" id="mode-1" class="mr-3"
+                            checked="@(ScenarioDataForDefinition.Mode == true)" @onchange="() => SelectedMode(true)" />Practice
+                        </h6>
+                        <h6 for="real" class="m-2">
+                            <input type="radio" id="mode-2" class="mr-3"
+                            checked="@(ScenarioDataForDefinition.Mode == false)" @onchange="() => SelectedMode(false)" />Real
+                        </h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label for="demand source">Demand Source:</label>
+                    <div class="border border-secondary rounded">
+                        @foreach (var demandSource in ConfigDemandSourceList)
+                        {
+                            <h6 for="@demandSource.name" class="m-2">
+                                <input type="radio" id="demandsource-@demandSource.demandSourceId" 
+                                value="@demandSource.demandSourceId" class="mr-3"
+                                checked="@(ScenarioDataForDefinition.DemandSource == demandSource.demandSourceId)" 
+                                @onchange="() => SelectedDemandSource(demandSource.demandSourceId)" />@demandSource.name
+                            </h6>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public bool InvalidScenarioNickName { get; set; }
+    [Parameter]
+    public ScenarioDefinitionViewModel ScenarioDataForDefinition { get; set; }
+    [Parameter]
+    public IEnumerable<ConfigDemandSource> ConfigDemandSourceList { get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedNickNameCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedDescriptionCallback{ get; set; }
+    [Parameter]
+    public EventCallback<bool> GetChangedModeCallback{ get; set; }
+    [Parameter]
+    public EventCallback<int> GetChangedDemandSourceCallback{ get; set; }
+
+    private async void GetChangedNickName(ChangeEventArgs e)
+    {
+        StateContainer.EmptyScenarioNickName = false;
+        var nickName = e.Value.ToString();
+        await GetChangedNickNameCallback.InvokeAsync(nickName);
+    }
+
+    private async void GetChangedDescription(ChangeEventArgs e)
+    {
+        StateContainer.EmptyScenarioDescription = false;
+        var description = e.Value.ToString();
+        await GetChangedDescriptionCallback.InvokeAsync(description);
+    }
+
+    private async void SelectedMode(bool option)
+    {
+        ScenarioDataForDefinition.Mode = option;
+        await GetChangedModeCallback.InvokeAsync(option);
+    }
+
+    private async void SelectedDemandSource(int id)
+    {
+        ScenarioDataForDefinition.DemandSource = id;
+        await GetChangedDemandSourceCallback.InvokeAsync(id);
+    }
+}

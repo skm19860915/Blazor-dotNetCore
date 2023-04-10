@@ -1,0 +1,37 @@
+﻿@using Ortho.Client.Data.Services.DemandInputs
+@using Ortho.Shared.Enums
+@inject ILISFileServices services
+
+@typeparam T
+<div ondragover="event.preventDefault()" @ondrop="@OnDrop" @ondragenter="@OnDragEnter" @ondragleave="@OnDragLeave" class="@dropClass">
+    @ChildContent
+</div>
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    [Parameter]
+    public ConfigLisField Zone { get; set; }
+    [Parameter]
+    public Action<string, ConfigLisField> Drop { get; set; }
+    public string dropClass = "";
+
+    private void OnDrop()
+    {
+        //dropClass = "";
+        if (Drop != null)
+            Drop(services.Data, Zone);
+    }
+
+    private void OnDragEnter()
+    {
+        //if (Drop != null && LISFileServices.Accepts(Zone))
+        //    dropClass = "can-drop";
+        //else
+        //    dropClass = "no-drop";
+    }
+
+    private void OnDragLeave()
+    {
+        //dropClass = "";
+    }
+}

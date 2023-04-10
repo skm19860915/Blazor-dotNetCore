@@ -1,0 +1,211 @@
+﻿@page "/manager"
+@using Ortho.Client.Pages.ScenarioManager
+@using Ortho.Client.Data.Services.ScenarioManager
+@using Ortho.Shared.ViewModels
+@using Ortho.Shared.Models
+@using Ortho.Shared.Enums
+@inject IManagerServices services
+@inject IStringLocalizer<Language> Localizer
+@inject StateContainer StateContainer
+@inject NavigationManager NavigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IDisposable
+
+<style>
+    #filter-btn{
+        background-color: #e2e7e3;
+        padding: 9px;
+        cursor: pointer;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        text-align: center;
+    }
+</style>
+
+<div class="accordion" id="scenarioManagerGroup">
+    <div class="card main-panel">
+        <div class="card-header" id="headingScenarioManager">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link" type="button" data-toggle="collapse"
+                        data-target="#collapseScenarioManager" aria-expanded="true" aria-controls="collapseScenarioManager">
+                        @Localizer["Scenario Manager"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseScenarioManager" class="collapse show" aria-labelledby="headingScenarioManager" data-parent="#scenarioManagerGroup">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="float-left mt-2 mr-4">
+                            @if (SelectedAppUserId > 0)
+                            {
+                                <select class="form-control mb-3" @onchange="GetSelectedScenarioType">
+                                   <option value="0">Create New Scenario...</option>
+                                   @foreach (var configScenarioType in ConfigScenarioTypes)
+                                   {
+                                       <option value="@configScenarioType.scenarioTypeId">@configScenarioType.scenarioType</option>
+                                   }  
+                                </select>
+                            }
+                            else
+                            {
+                                <select class="form-control mb-3" @onchange="GetSelectedScenarioType" disabled>
+                                    <option value="0">Create New Scenario...</option>
+                                    @foreach (var configScenarioType in ConfigScenarioTypes)
+                                    {
+                                        <option value="@configScenarioType.scenarioTypeId">@configScenarioType.scenarioType</option>
+                                    }  
+                                </select>
+                            }
+                        </div>
+                        <div class="float-right mt-2 mr-4">
+                            <select class="form-control mb-3"  @onchange="GetSelectedAppUser">
+                               <option value="0">Select User</option>
+                               @foreach (var appUser in AppUsers)
+                               {
+                                   <option value="@appUser.Id">@appUser.Name</option>
+                               }  
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="float-left mt-2 mr-4">
+                            <button id="filter-btn" class="btn" @onclick="ShowFilterRow">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>    
+                        <DxCheckBox CheckedChanged="@((bool IsChecked) => GetCurrentStateScenarios(IsChecked))" 
+                            CssClass="mt-3 mr-1">Show archived scenarios</DxCheckBox>
+                    </div>
+                </div>
+                <ScenarioManagerSection
+                CurrentSceanrioState="@SelectedSceanrioState"
+                ScenarioList="@FilteredScenarios" 
+                ConfigScenarioTypeList="@ConfigScenarioTypes"
+                AppUserList="@AppUsers"
+                EditSelectedScenarioCallback="EditSelectedScenarioAsync"
+                RemoveSelectedScenarioCallback="RemoveSelectedScenarioAsync"
+                UndoSelectedScenarioCallback="UndoSelectedScenarioAsync"
+                DeleteSelectedScenarioCallback="DeleteSelectedScenarioAsync"
+                IsShowingFilterRow="@IsShowingFilterRow" />
+            </div>
+        </div>
+    </div>
+    <br /><br />
+</div>
+
+@code {
+    IEnumerable<ScenarioManagerViewModel> AllScenarios;
+    IEnumerable<ScenarioManagerViewModel> FilteredScenarios;
+    List<ConfigScenarioType> ConfigScenarioTypes { get; set; } = new();
+    List<AppUserViewModel> AppUsers { get; set; } = new();
+    bool IsShowingFilterRow { get; set; } = false;
+    int SelectedAppUserId { get; set; } = 0;
+    ScenarioState SelectedSceanrioState { get; set; } = ScenarioState.Active;
+
+    protected override void OnInitialized()
+    {
+        StateContainer.ActiveNavBar = false;
+        StateContainer.AuthenticationVerified = true;
+        StateContainer.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AllScenarios = await services.GetScenarioManagersAsync();
+        FilteredScenarios = AllScenarios.Where(s => s.State == ScenarioState.Active); // active scenarios
+        var configScenarioTypes = await services.GetConfigScenarioTypes();
+        ConfigScenarioTypes = configScenarioTypes.ToList();
+        var appUsers = await services.GetAppUsers();
+        AppUsers = appUsers.ToList();
+    }
+
+    private async void GetSelectedScenarioType(ChangeEventArgs e)
+    {
+        var scenarioTypeId = Convert.ToInt32(e.Value);
+        if (scenarioTypeId == 0)
+            return;
+
+        await sessionStorage.SetItemAsync("SCENARIO_TYPE", scenarioTypeId);
+        NavigationManager.NavigateTo("/scenario-definition/new");
+    }
+
+    private async void GetSelectedAppUser(ChangeEventArgs e)
+    {
+        var appUserId = Convert.ToInt32(e.Value);
+        SelectedAppUserId = appUserId;
+        FilteredScenarios = AllScenarios.Where(s => s.State == SelectedSceanrioState);
+
+        if (appUserId > 0)
+            FilteredScenarios = AllScenarios.Where(u => u.OwnerId == appUserId && u.State == SelectedSceanrioState);
+
+        await sessionStorage.SetItemAsync("APP_USER", appUserId);
+    }
+
+    private void GetCurrentStateScenarios(bool IsChecked)
+    {
+        SelectedSceanrioState = ScenarioState.Active;
+        if(IsChecked)
+            SelectedSceanrioState = ScenarioState.Archived;
+
+        FilteredScenarios = AllScenarios.Where(a => a.State == SelectedSceanrioState);
+
+        if(SelectedAppUserId > 0)
+            FilteredScenarios = AllScenarios.Where(u => u.OwnerId == SelectedAppUserId && u.State == SelectedSceanrioState);
+    }
+
+    private void ShowFilterRow()
+    {
+        if (IsShowingFilterRow)
+            IsShowingFilterRow = false;
+        else
+            IsShowingFilterRow = true;
+    }
+
+    private async void EditSelectedScenarioAsync(int id)
+    {
+        StateContainer.ScenarioId = id.ToString();
+        var selectedScenario = AllScenarios.FirstOrDefault(a => a.Id == id);
+        await sessionStorage.SetItemAsync("SCENARIO_TYPE", selectedScenario.TypeId);
+        await sessionStorage.SetItemAsync("APP_USER", selectedScenario.OwnerId);
+        await sessionStorage.SetItemAsync("CUSTOMER", selectedScenario.CustomerId);
+        await sessionStorage.SetItemAsync("LIS_FILE_SET_ID", selectedScenario.LisSetId);
+        NavigationManager.NavigateTo("/scenario-definition/" + id);
+    }
+
+    private async Task RemoveSelectedScenarioAsync(int id)
+    {
+        var success = await services.RemoveScenarioAsync(id);
+        if (!success)
+            return;
+
+        AllScenarios = await services.GetScenarioManagersAsync();
+        FilteredScenarios = AllScenarios.Where(s => s.State == ScenarioState.Active);
+    }
+
+    private async Task UndoSelectedScenarioAsync(int id)
+    {
+        var success = await services.UndoScenarioAsync(id);
+        if (!success)
+            return;
+
+        AllScenarios = await services.GetScenarioManagersAsync();
+        FilteredScenarios = AllScenarios.Where(s => s.State == ScenarioState.Archived);
+    }
+
+    private async Task DeleteSelectedScenarioAsync(int id)
+    {
+        var success = await services.DeleteScenarioAsync(id);
+        if (!success)
+            return;
+
+        AllScenarios = await services.GetScenarioManagersAsync();
+        FilteredScenarios = AllScenarios.Where(s => s.State == ScenarioState.Archived);
+    }
+}

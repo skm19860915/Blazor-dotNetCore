@@ -1,0 +1,29 @@
+﻿@page "/"
+@using System.Globalization
+@implements IDisposable
+@inject StateContainer StateContainer
+@inject NavigationManager NavigationManager
+
+@if (StateContainer.AuthenticationVerified){
+    @if (StateContainer.ActiveNavBar){
+        NavigationManager.NavigateTo("/scenario-definition/" + StateContainer.ScenarioId);
+    }
+    else{
+        NavigationManager.NavigateTo("/manager");
+    }
+}
+else{
+    NavigationManager.NavigateTo("/login");
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        StateContainer.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+}

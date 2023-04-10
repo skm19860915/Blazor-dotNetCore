@@ -1,0 +1,62 @@
+﻿@using Ortho.Client.Data.Services.DemandInputs
+@using Ortho.Client.Data.ViewModels.DemandInputs
+
+<style>
+    .dxbs-cmd-cell button {
+        color: #212529 !important;
+    }
+    .dxbs-fl-ctrl button{
+        color: #212529 !important;
+    }
+</style>
+
+@inject IAssayMappingServices services
+
+<div class="row">
+    <div class="col-4">
+        <h5>Define STAT Priorities in File</h5>
+        <div>
+            <DxDataGrid Data="@Priorities" KeyFieldName="@nameof(PriorityModel.Id)"
+                        PageSize="5">
+                <DxDataGridColumn Field="@nameof(PriorityModel.Name)" Caption="Name" />
+                <DxDataGridCheckBoxColumn Field="@nameof(PriorityModel.State)" Caption="State" AllowSort="false" />
+            </DxDataGrid>
+        </div>
+    </div>
+</div><br /><br />
+<div class="row">
+    <div class="col-12">
+        <h5>Assay Mapping</h5>
+        <div>
+            <span>The run contained the following 15 missing values:</span>
+            @*<DxButton Text="Process New Mapping" RenderStyleMode="@ButtonRenderStyleMode.Outline"
+                      RenderStyle="@ButtonRenderStyle.Dark" style="float:right; margin-bottom:5px; margin-top:-8px;" />*@
+        </div>
+        <div>
+            <DxDataGrid Data="@AssayMappings" KeyFieldName="@nameof(AssayMappingViewModel.Id)" PageSize="5">
+                <DxDataGridColumn Field="@nameof(AssayMappingViewModel.AssayName)" Caption="Assay Name" />
+                <DxDataGridColumn Field="@nameof(AssayMappingViewModel.Occurances)" Caption="Occurances" />
+                <DxDataGridComboBoxColumn Field="@nameof(AssayMappingViewModel.MappingType)" Data="@TypeNameList" Caption="Map To Assay Or Panel" />
+                <DxDataGridComboBoxColumn Field="@nameof(AssayMappingViewModel.MappingValue)" Data="@ValueNameList" Caption="Value" />
+                <DxDataGridCheckBoxColumn Field="@nameof(AssayMappingViewModel.SaveToUserMapping)" Caption="Save To User Mapping" AllowSort="false" />
+                <DxDataGridCheckBoxColumn Field="@nameof(AssayMappingViewModel.SaveToGlobalMapping)" Caption="Save To Global Mapping" AllowSort="false" />
+                <DxDataGridCommandColumn Width="100px"></DxDataGridCommandColumn>
+            </DxDataGrid>
+        </div>
+    </div>
+</div>
+
+@code {
+    IEnumerable<PriorityModel> Priorities;
+    IEnumerable<AssayMappingViewModel> AssayMappings;
+    IEnumerable<string> TypeNameList;
+    IEnumerable<string> ValueNameList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Priorities = await services.GetPrioritiesAsync();
+        AssayMappings = await services.GetAssayMappingListAsync();
+        TypeNameList = await services.GetMapTypeNameListAsync();
+        ValueNameList = await services.GetMapValueNameListAsync();
+    }
+}

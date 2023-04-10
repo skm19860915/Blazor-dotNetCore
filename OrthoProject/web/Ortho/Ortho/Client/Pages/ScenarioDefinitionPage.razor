@@ -1,0 +1,247 @@
+﻿@page "/scenario-definition/{ScenarioId}"
+@using Ortho.Client.Pages.ScenarioDefinition
+@using Ortho.Client.Data.Services.ScenarioDefinition
+@using Ortho.Shared.Models
+@using Ortho.Shared.ViewModels
+@inject IScenarioServices services
+@inject IStringLocalizer<Language> Localizer
+@implements IDisposable
+@inject StateContainer StateContainer
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+<div class="accordion" id="scenarioDefinitionGroup">
+    <div class="card main-panel">
+        <div class="card-header" id="headingDefinition">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link" type="button" data-toggle="collapse"
+                        data-target="#collapseDefinition" aria-expanded="true" aria-controls="collapseDefinition">
+                    @Localizer["Scenario Definition"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseDefinition" class="collapse show" aria-labelledby="headingDefinition" 
+            data-parent="#scenarioDefinitionGroup">
+            <div class="card-body">
+                <ScenarioDefinitionSection
+                ScenarioDataForDefinition="@Scenario"
+                ConfigDemandSourceList="@ConfigDemandSources"
+                GetChangedNickNameCallback="GetNickNameForSaving"
+                GetChangedDescriptionCallback="GetDescriptionForSaving"
+                GetChangedModeCallback="GetModeForSaving"
+                GetChangedDemandSourceCallback="GetDemandSourceForSaving" />
+            </div>
+        </div>
+    </div>
+    <br /><br />
+    <div class="card main-panel">
+        <div class="card-header" id="headingDetails">
+            <h5 class="mb-0">
+                <button class="font-weight-bold btn btn-link collapsed" type="button" data-toggle="collapse"
+                        data-target="#collapseDetails" aria-expanded="false" aria-controls="collapseDetails">
+                    @Localizer["Customer Details"]
+                </button>
+            </h5>
+        </div>
+        <div id="collapseDetails" class="collapse" aria-labelledby="headingDetails"
+            data-parent="#scenarioDefinitionGroup">
+            <div class="card-body">
+                <CustomerDetailsSection
+                ScenarioId="@ScenarioId"
+                ScenarioDataForCustomerDetails="@Scenario"
+                ConfigLabTypeList="@ConfigLabTypes"
+                ExtCustomerList="@ExtCustomers"
+                GetChangedSfdcNumberCallback="GetSfdcNumberForSaving"
+                GetChangedCustomerTypeCallback="GetCustomerTypeForSaving"
+                GetChangedLabTypeCallback="GetLabTypeForSaving"
+                GetChangedCustomerNameCallback="GetCustomerNameForSaving"
+                GetChangedCityCallback="GetCityForSaving"
+                GetChangedStateCallback="GetStateForSaving"
+                GetChangedCountryCallback="GetCountryForSaving" />
+            </div>
+        </div>
+    </div>
+    <br /><br />
+</div>
+
+@code {
+    [Parameter]
+    public string ScenarioId { get; set; }
+    ScenarioDefinitionViewModel Scenario { get; set; } = new();
+    List<ConfigLabType> ConfigLabTypes { get; set; } = new();
+    List<ExtCustomer> ExtCustomers { get; set; } = new();
+    List<ConfigDemandSource> ConfigDemandSources { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        StateContainer.ActiveNavBar = true;
+        StateContainer.AuthenticationVerified = true;
+        StateContainer.ScenarioId = ScenarioId;
+        StateContainer.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainer.OnChange -= StateHasChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var configLabTypes = await services.GetConfigLabTypes();
+        ConfigLabTypes = configLabTypes.ToList();
+        var extCustomers = await services.GetExtCustomersAsync();
+        ExtCustomers = extCustomers.ToList();
+        var configDemandSources = await services.GetConfigDemandSources();
+        ConfigDemandSources = configDemandSources.ToList();
+
+        if(string.Equals(ScenarioId, "new"))
+            Scenario = await GetNewScenarioDefintionAsync();
+        else
+            Scenario = await services.GetScenarioDefintionAsync(ScenarioId);
+
+        StateContainer.ScenarioDefinitionObj = Scenario;
+    }
+
+    private async Task<ScenarioDefinitionViewModel> GetNewScenarioDefintionAsync()
+    {
+        var scenarioTypeId = await sessionStorage.GetItemAsync<int>("SCENARIO_TYPE");
+        var appUserId = await sessionStorage.GetItemAsync<int>("APP_USER");
+        var scenarioTypes = await services.GetConfigScenarioTypes();
+        var appUsers = await services.GetAppUsers();
+
+        var initialScenario = new ScenarioDefinitionViewModel
+        {
+            Id = 0,
+            ScenarioTypeId = scenarioTypeId,
+            ScenarioType = scenarioTypes.FirstOrDefault(s => s.scenarioTypeId == scenarioTypeId).scenarioType,
+            CreationDate = DateTime.Now.ToString("MM/dd/yyyy"),
+            CreatorId = appUserId,
+            Creator = appUsers.FirstOrDefault(a => a.Id == appUserId).Name,
+            OwnerId = appUserId,
+            Owner = appUsers.FirstOrDefault(a => a.Id == appUserId).Name,
+            OwnerTitle = appUsers.FirstOrDefault(a => a.Id == appUserId).Title,
+        };
+
+        var scenario = await GetCompletedNewScenario(initialScenario);
+
+        return scenario;
+    }
+
+    private async Task<ScenarioDefinitionViewModel> GetCompletedNewScenario(ScenarioDefinitionViewModel model)
+    {
+        var sfdcNumber = await sessionStorage.GetItemAsync<string>("NEW_SFDC_NUMBER");
+        if (string.IsNullOrEmpty(sfdcNumber))
+            return model;
+
+        var extCustomers = await services.GetExtCustomersAsync();
+        var customer = extCustomers.FirstOrDefault(e => string.Equals(e.sfdcId, sfdcNumber));
+        model.CustomerId = customer.customerId;
+        model.CustomerName = customer.name;
+        model.SfdcNumber = customer.sfdcId;
+        model.City = customer.city;
+        model.State = customer.stateOrProvince;
+        model.Country = customer.country;
+
+        await sessionStorage.RemoveItemAsync("NEW_SFDC_NUMBER");
+
+        return model;
+    }
+
+    private void GetNickNameForSaving(string nickName)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.NickName = nickName;
+    }
+
+    private void GetDescriptionForSaving(string description)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.Description = description;
+    }
+
+    private void GetModeForSaving(bool mode)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.Mode = mode;
+    }
+
+    private void GetDemandSourceForSaving(int demandSource)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.DemandSource = demandSource;
+    }
+
+    private async void GetSfdcNumberForSaving(string number)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        var extCustomer = ExtCustomers.FirstOrDefault(e => string.Equals(e.sfdcId, number));
+        if(extCustomer != null)
+        {
+            StateContainer.ScenarioDefinitionObj.CustomerId = extCustomer.customerId;
+            StateContainer.ScenarioDefinitionObj.CustomerName = extCustomer.name;
+            StateContainer.ScenarioDefinitionObj.City = extCustomer.city;
+            StateContainer.ScenarioDefinitionObj.State = extCustomer.stateOrProvince;
+            StateContainer.ScenarioDefinitionObj.Country = extCustomer.country;
+
+            StateContainer.EmptyCustomerName = false;
+            StateContainer.EmptyCity = false;
+            StateContainer.EmptyStateProvince = false;
+            StateContainer.EmptyCountry = false;
+
+            var newSFDCNumber = await sessionStorage.GetItemAsync<string>("NEW_SFDC_NUMBER");
+            if (!string.IsNullOrEmpty(newSFDCNumber))
+                await sessionStorage.RemoveItemAsync("NEW_SFDC_NUMBER");
+        }
+        else
+        {
+            StateContainer.ScenarioDefinitionObj.CustomerId = 0;
+            StateContainer.ScenarioDefinitionObj.CustomerName = string.Empty;
+            StateContainer.ScenarioDefinitionObj.City = string.Empty;
+            StateContainer.ScenarioDefinitionObj.State = string.Empty;
+            StateContainer.ScenarioDefinitionObj.Country = string.Empty;
+
+            StateContainer.EmptyCustomerName = true;
+            StateContainer.EmptyCity = true;
+            StateContainer.EmptyStateProvince = true;
+            StateContainer.EmptyCountry = true;
+
+            await sessionStorage.SetItemAsync("NEW_SFDC_NUMBER", number);
+        }
+        StateContainer.ScenarioDefinitionObj.SfdcNumber = number;
+    }
+
+    private void GetCustomerTypeForSaving(bool customerType)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.CustomerType = customerType;
+    }
+
+    private void GetLabTypeForSaving(int labType)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.LabType = labType;
+    }
+
+    private void GetCustomerNameForSaving(string customerName)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.CustomerName = customerName;
+    }
+
+    private void GetCityForSaving(string city)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.City = city;
+    }
+
+    private void GetStateForSaving(string state)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.State = state;
+    }
+
+    private void GetCountryForSaving(string country)
+    {
+        StateContainer.ScenarioDefinitionChanged = true;
+        StateContainer.ScenarioDefinitionObj.Country = country;
+    }
+}

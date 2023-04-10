@@ -1,0 +1,174 @@
+﻿@using Ortho.Client.Data.Services.ScenarioDefinition
+@using Ortho.Shared.Enums
+@inject IStringLocalizer<Language> Localizer
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+<style>
+    .nav-link.disabled {
+    color: #6c757d !important;
+    }
+</style>
+
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">Ortho</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column" style="background-color: #e5e5e5; margin-left:20px;">
+        <li class="nav-item">
+            <NavLink class="@scenarioDefinitionNavMenuItemCssClass" href="javascript:;" 
+            @onclick='() => CheckChanged("scenario-definition", 0)'>
+            @Localizer["Scenario Definition"]</NavLink>
+        </li>
+        <li class="nav-item">
+            @if (ShowTrackConfigurationItem)
+            {
+                @if (DisableNavMenuItem)
+                {
+                    <NavLink class="nav-link disabled" href="javascript:;">
+                    @Localizer["Track Configuration"]</NavLink>
+                }
+                else
+                {
+                    <NavLink class="@trackConfigurationNavMenuItemCssClass" href="javascript:;" 
+                    @onclick='() => CheckChanged("track-configuration", 1)'>
+                    @Localizer["Track Configuration"]</NavLink>    
+                }
+            }
+        </li>
+        <li class="nav-item">
+            @if (DisableNavMenuItem)
+            {
+                <NavLink class="nav-link disabled" href="javascript:;">
+                @Localizer["Demand Inputs"]</NavLink>    
+            }
+            else
+            {
+                <NavLink class="@demandInputsNavMenuItemCssClass" href="javascript:;" 
+                @onclick='() => CheckChanged("demand-inputs", 2)'>
+                @Localizer["Demand Inputs"]</NavLink>    
+            }
+            
+        </li>
+        <li class="nav-item">
+            @if (DisableNavMenuItem)
+            {
+                <NavLink class="nav-link disabled" href="javascript:;">
+                @Localizer["Run Simulation"]</NavLink>
+            }
+            else
+            {
+                <NavLink class="@runSimulationNavMenuItemCssClass" href="javascript:;" 
+                @onclick='() => CheckChanged("run-simulation", 3)'>
+                @Localizer["Run Simulation"]</NavLink>    
+            }
+            
+        </li>
+        <li class="nav-item">
+            @if (DisableNavMenuItem)
+            {
+                <NavLink class="nav-link disabled" href="javascript:;">
+                @Localizer["Outputs"]</NavLink>    
+            }
+            else
+            {
+                <NavLink class="@outputsNavMenuItemCssClass" href="javascript:;" 
+                @onclick='() => CheckChanged("outputs", 4)'>
+                @Localizer["Outputs"]</NavLink>    
+            }
+        </li>
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private bool scenarioDefinitionNavMenuItem = true;
+    private string scenarioDefinitionNavMenuItemCssClass => 
+    scenarioDefinitionNavMenuItem ? "nav-link active" : "nav-link";
+    private bool trackConfigurationNavMenuItem = false;
+    private string trackConfigurationNavMenuItemCssClass => 
+    trackConfigurationNavMenuItem ? "nav-link active" : "nav-link";
+    private bool demandInputsNavMenuItem = false;
+    private string demandInputsNavMenuItemCssClass => 
+    demandInputsNavMenuItem ? "nav-link active" : "nav-link";
+    private bool runSimulationNavMenuItem = false;
+    private string runSimulationNavMenuItemCssClass => 
+    runSimulationNavMenuItem ? "nav-link active" : "nav-link";
+    private bool outputsNavMenuItem = false;
+    private string outputsNavMenuItemCssClass => 
+    outputsNavMenuItem ? "nav-link active" : "nav-link";
+    [Parameter]
+    public string ScenarioId{ get; set; }
+    [Parameter]
+    public EventCallback<string> CheckChangedCallback { get; set; }
+    private bool ShowTrackConfigurationItem { get; set; }
+    private bool DisableNavMenuItem { get; set; }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var scenarioTypeId = await sessionStorage.GetItemAsync<int>("SCENARIO_TYPE");
+        if (scenarioTypeId == (int)ScenarioType.Automation)
+            ShowTrackConfigurationItem = true;
+
+        if(string.Equals(ScenarioId, "new"))
+           DisableNavMenuItem = true;
+    }
+
+    private async void CheckChanged(string page, int itemIndex)
+    {
+        ChangeToActiveCssClass(itemIndex);
+        var path = page + "/" + ScenarioId;
+        await CheckChangedCallback.InvokeAsync(path);
+    }
+
+    private void ChangeToActiveCssClass(int index)
+    {
+        switch (index)
+        {
+            case 1:
+                scenarioDefinitionNavMenuItem = false;
+                trackConfigurationNavMenuItem = true;
+                demandInputsNavMenuItem = false;
+                runSimulationNavMenuItem = false;
+                outputsNavMenuItem = false;
+                break;
+            case 2:
+                scenarioDefinitionNavMenuItem = false;
+                trackConfigurationNavMenuItem = false;
+                demandInputsNavMenuItem = true;
+                runSimulationNavMenuItem = false;
+                outputsNavMenuItem = false;
+                break;
+            case 3:
+                scenarioDefinitionNavMenuItem = false;
+                trackConfigurationNavMenuItem = false;
+                demandInputsNavMenuItem = false;
+                runSimulationNavMenuItem = true;
+                outputsNavMenuItem = false;
+                break;
+            case 4:
+                scenarioDefinitionNavMenuItem = false;
+                trackConfigurationNavMenuItem = false;
+                demandInputsNavMenuItem = false;
+                runSimulationNavMenuItem = false;
+                outputsNavMenuItem = true;
+                break;
+            default:
+                scenarioDefinitionNavMenuItem = true;
+                trackConfigurationNavMenuItem = false;
+                demandInputsNavMenuItem = false;
+                runSimulationNavMenuItem = false;
+                outputsNavMenuItem = false;
+                break;
+        }
+    }
+}

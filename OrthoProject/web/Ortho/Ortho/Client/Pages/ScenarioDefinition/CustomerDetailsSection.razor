@@ -1,0 +1,185 @@
+﻿@using Ortho.Shared.ViewModels
+@using Ortho.Shared.Models
+@inject StateContainer StateContainer
+
+<div class="row">
+    <div class="col-sm-8">
+        <div class="row">
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label for="sfdc number">SFDC Number:*</label>
+                    @if(string.Equals(ScenarioId, "new"))
+                    {
+                        <input type="text" 
+                        value="@ScenarioDataForCustomerDetails.SfdcNumber"
+                        class="form-control form-control-sm @(StateContainer.EmptySFDCNumber == true ? "is-invalid" : "")"
+                        list="sfdcNumberSearch" @onchange="GetChangedSfdcNumber" />
+                        <datalist id="sfdcNumberSearch">
+                            @foreach(var customer in ExtCustomerList)
+                            {
+                                <option>@customer.sfdcId</option>
+                            }
+                        </datalist>
+                    }
+                    else
+                    {
+                        <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.SfdcNumber" ReadOnly="true" 
+                        @oninput="GetChangedSfdcNumber" />    
+                    }
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="form-group">
+                    <label for="customer type">Customer Type:</label>
+                    <div class="border border-secondary rounded">
+                        <h6 for="practice" class="m-2">
+                            <input type="radio" id="newCustomer" class="mr-3"
+                            checked="@(ScenarioDataForCustomerDetails.CustomerType == true)" 
+                            @onchange="() => SelectedCustomerType(true)" />New (Group 3)
+                        </h6>
+                        <h6 for="real" class="m-2">
+                            <input type="radio" id="currentCustomer" class="mr-3"
+                            checked="@(ScenarioDataForCustomerDetails.CustomerType == false)"
+                            @onchange="() => SelectedCustomerType(false)" />Current
+                        </h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-5">
+                <div class="form-group">
+                    <label for="lab type">Lab Type:</label>
+                    <div class="border border-secondary rounded">
+                        @foreach (var labType in ConfigLabTypeList)
+                        {
+                            <h6 for="@labType.labType" class="m-2">
+                                <input type="radio" id="labType-@labType.labTypeId" value="@labType.labTypeId" class="mr-3"
+                                checked="@(ScenarioDataForCustomerDetails.LabType == labType.labTypeId)" 
+                                @onchange="() => SelectedLabType(labType.labTypeId)" />@labType.labType
+                            </h6>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-3">
+        <div class="form-group">
+            <label for="customer name">Customer Name:</label>
+            @if(string.Equals(ScenarioId, "new"))
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.CustomerName" @oninput="GetChangedCustomerName" />
+            }
+            else
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.CustomerName" ReadOnly="true" />
+            }
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="form-group">
+            <label for="city">City:</label>
+            @if(string.Equals(ScenarioId, "new"))
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.City" @oninput="GetChangedCity" />
+            }
+            else
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.City" ReadOnly="true" />
+            }
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="form-group">
+            <label for="state">State/Province:</label>
+            @if(string.Equals(ScenarioId, "new"))
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.State" @oninput="GetChangedState" />
+            }
+            else
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.State" ReadOnly="true" />
+            }
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="form-group">
+            <label for="country">Country:</label>
+            @if(string.Equals(ScenarioId, "new"))
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.Country" @oninput="GetChangedCountry" />
+            }
+            else
+            {
+                <DxTextBox @bind-Text="ScenarioDataForCustomerDetails.Country" ReadOnly="true" />
+            }
+        </div>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public string ScenarioId{ get; set; }
+    [Parameter]
+    public ScenarioDefinitionViewModel ScenarioDataForCustomerDetails { get; set; }
+    [Parameter]
+    public IEnumerable<ConfigLabType> ConfigLabTypeList { get; set; }
+    [Parameter]
+    public IEnumerable<ExtCustomer> ExtCustomerList { get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedSfdcNumberCallback { get; set; }
+    [Parameter]
+    public EventCallback<bool> GetChangedCustomerTypeCallback { get; set; }
+    [Parameter]
+    public EventCallback<int> GetChangedLabTypeCallback { get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedCustomerNameCallback { get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedCityCallback { get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedStateCallback { get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedCountryCallback { get; set; }
+
+    private async void GetChangedSfdcNumber(ChangeEventArgs e)
+    {
+        StateContainer.EmptySFDCNumber = false;
+        var number = e.Value.ToString();
+        await GetChangedSfdcNumberCallback.InvokeAsync(number);
+    }
+
+    private async void SelectedCustomerType(bool option)
+    {
+        await GetChangedCustomerTypeCallback.InvokeAsync(option);
+    }
+
+    private async void SelectedLabType(int id)
+    {
+        await GetChangedLabTypeCallback.InvokeAsync(id);
+    }
+
+    private async void GetChangedCustomerName(ChangeEventArgs e)
+    {
+        var customerName = e.Value.ToString();
+        await GetChangedCustomerNameCallback.InvokeAsync(customerName);
+    }
+
+    private async void GetChangedCity(ChangeEventArgs e)
+    {
+        var city = e.Value.ToString();
+        await GetChangedCityCallback.InvokeAsync(city);
+    }
+
+    private async void GetChangedState(ChangeEventArgs e)
+    {
+        var state = e.Value.ToString();
+        await GetChangedStateCallback.InvokeAsync(state);
+    }
+
+    private async void GetChangedCountry(ChangeEventArgs e)
+    {
+        var country = e.Value.ToString();
+        await GetChangedCountryCallback.InvokeAsync(country);
+    }
+}
