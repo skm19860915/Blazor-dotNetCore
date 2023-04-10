@@ -1,0 +1,472 @@
+﻿@using Ortho.Client.Pages.DemandInputs.LISFile
+@using Ortho.Client.Data.Services.DemandInputs
+@using Ortho.Shared.Enums
+@using Ortho.Shared.Mappings
+@using Ortho.Shared.Models
+@using Ortho.Shared.ViewModels
+@using System.Text.RegularExpressions
+@using System.IO
+@inject ILISFileServices services
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject NavigationManager NavigationManager
+
+<div class="row">
+    <div class="col-6">
+        <h6>LIS File Selection:</h6>
+        <div class="d-flex justify-content-between">
+            <div style="width:100%; margin-right:20px;">
+                <select class="form-control" @onchange="GetSelectedLISFile">
+                    @if (!LISFileAndColumnMappingList.Any())
+                    {
+                        <option value=0>Upload New or Use Existing File</option>
+                    }
+                    else
+                    {
+                        @foreach (var file in LISFileAndColumnMappingList)
+                        {
+                            <option value=@file.Id>@file.FileName</option>     
+                        }  
+                    }
+                </select>
+            </div>
+            <div>
+                <InputFile OnChange="@OnInputFileChange" accept=".csv" />
+            </div>
+        </div>
+        <br /><br />
+    </div>
+    <div class="col-6"></div>
+    <div class="col-12">
+        <span>
+            Drag yellow header from right to blue rectangles on the left to map headers in the
+            LIS file to headers the model is expecting. Select the Process Headers button when complete.
+        </span>
+    </div>
+    <div class="col-3">
+        <DxButton Text="Process Headers" RenderStyleMode="@ButtonRenderStyleMode.Outline" 
+        RenderStyle="@ButtonRenderStyle.Dark" Click="@ProcessHeaderData"
+        style="float:left; margin-top:10px; margin-bottom:5px;" />
+    </div>
+</div>
+<div class="row" style="display:flex;">
+    <div class="col-3" style="flex:1; padding:1em;">
+        <h5>Model Fields</h5>
+        <div class="dragdropbox">
+            <div class="row">
+                <div class="col-7">
+                    <br />
+                    <h6 class="model-drop-title">Date:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.Date">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.Date.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Time<span>*</span>:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.Time">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.Time.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Sample ID<span>*</span>:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.SampleID">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.SampleID.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Assay Code<span>*</span>:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.AssayCode">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.AssayCode.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Specimen Type:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.SpecimenType">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.SpecimenType.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Priority:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.Priority">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.Priority.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Location:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.Location">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.Location.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+                <div class="col-7">
+                    <h6 class="model-drop-title">Result Time:</h6>
+                    <DropSection T="string" Drop="@OnDrop" Zone="@ConfigLisField.ResultTime">
+                        <div class="drop-target">@LISColumnDragAndDropMapping.ResultTime.ToGetData()</div>
+                    </DropSection>
+                </div>
+                <div class="col-5"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-9" style="flex:1; padding:1em;">
+        @if (!string.IsNullOrEmpty(SelectedLISFile.FileName))
+        {
+            <h5>@SelectedLISFile.FileName</h5>
+        }
+        else
+        {
+            <h5 style="color:transparent;">Nothing</h5>
+        }
+        <div class="dragdropbox">
+            <div class="row">
+                <div class="col-3">
+                    <br /><h6 class="model-drop-title">Header Name</h6><br />
+                </div>
+                <div class="col-9">
+                    <br /><h6 class="model-drop-title">Column Sample Data</h6><br />
+                </div>
+                @if (FileColumnMappings.Any())
+                {
+                    @foreach(var m in FileColumnMappings)
+                    {
+                        <div class="col-3">
+                            <DragableSection T="string" Data="@(m.columnNumber + ":" + m.exampleData)">
+                                <div class="draggable">@m.unmappedColumn</div>
+                            </DragableSection>    
+                        </div>
+                        <div class="col-9">
+                            <br /><span>@m.exampleData</span>
+                        </div>
+                    }    
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<DxPopup HeaderText="Header" @bind-Visible="@WarningPopupVisible" BodyText="Wrong File. Please upload csv file."></DxPopup>
+<DxPopup @bind-Visible="@NotePopupVisible" ShowFooter="true" HeaderText="Note">
+    <BodyTemplate>
+        <span class="m-3">The LIS file name already exists, would you like to use the existing file?</span>
+    </BodyTemplate>
+    <FooterContentTemplate>
+        <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="OK" Click="@(() => Overwrite())"/>
+        <DxButton RenderStyle="ButtonRenderStyle.Secondary" Text="Cancel" Click="@(() => NotePopupVisible = false)"/>
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    private bool WarningPopupVisible { get; set; } = false;
+    private bool NotePopupVisible { get; set; } = false;
+    private IBrowserFile CsvFile{ get; set; }
+    [Parameter]
+    public List<LISFileAndColumnMappingViewModel> LISFileAndColumnMappingList { get; set; } = new();
+    LISFileAndColumnMappingViewModel SelectedLISFile { get; set; } = new();
+    List<DemandFileColumnMapping> FileColumnMappings { get; set; } = new();
+    [Parameter]
+    public string ScenarioId { get; set; }
+    private int UserId { get; set; }
+    private int CustomerId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeDragAndDropMappingData();
+        UserId = await sessionStorage.GetItemAsync<int>("APP_USER");
+        CustomerId = await sessionStorage.GetItemAsync<int>("CUSTOMER");
+        var lisFileAndColumnMappings = await services.GetLISFileAndColumnMappingsAsync(UserId, CustomerId);
+        LISFileAndColumnMappingList = lisFileAndColumnMappings.ToList();
+        if (!LISFileAndColumnMappingList.Any())
+            return;
+
+        var selectedLISFile = LISFileAndColumnMappingList.FirstOrDefault();
+        SelectedLISFile = selectedLISFile;
+        FileColumnMappings = selectedLISFile.DemandFileColumnMappings.ToList();
+        UpdateModelFields(FileColumnMappings);
+    }
+
+    private void UpdateModelFields(List<DemandFileColumnMapping> fileColumnMappings)
+    {
+        foreach(var f in fileColumnMappings)
+        {
+            var data = f.columnNumber + ":" + f.exampleData;
+
+            switch (f.fldId)
+            {
+                case (int)ConfigLisField.Date:
+                    LISColumnDragAndDropMapping.Date = data;
+                    break;
+                case (int)ConfigLisField.Time:
+                    LISColumnDragAndDropMapping.Time = data;
+                    break;
+                case (int)ConfigLisField.SampleID:
+                    LISColumnDragAndDropMapping.SampleID = data;
+                    break;
+                case (int)ConfigLisField.AssayCode:
+                    LISColumnDragAndDropMapping.AssayCode = data;
+                    break;
+                case (int)ConfigLisField.SpecimenType:
+                    LISColumnDragAndDropMapping.SpecimenType = data;
+                    break;
+                case (int)ConfigLisField.Priority:
+                    LISColumnDragAndDropMapping.Priority = data;
+                    break;
+                case (int)ConfigLisField.Location:
+                    LISColumnDragAndDropMapping.Location = data;
+                    break;
+                case (int)ConfigLisField.ResultTime:
+                    LISColumnDragAndDropMapping.ResultTime = data;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private void GetSelectedLISFile(ChangeEventArgs e)
+    {
+        InitializeDragAndDropMappingData();
+        var id = Convert.ToInt32(e.Value);
+        SelectedLISFile = LISFileAndColumnMappingList.FirstOrDefault(x => x.Id == id);
+        FileColumnMappings = SelectedLISFile.DemandFileColumnMappings.ToList();
+        UpdateModelFields(FileColumnMappings);
+    }
+
+    private void InitializeDragAndDropMappingData()
+    {
+        LISColumnDragAndDropMapping.Date = string.Empty;
+        LISColumnDragAndDropMapping.Time = string.Empty;
+        LISColumnDragAndDropMapping.SampleID = string.Empty;
+        LISColumnDragAndDropMapping.AssayCode = string.Empty;
+        LISColumnDragAndDropMapping.SpecimenType = string.Empty;
+        LISColumnDragAndDropMapping.Priority = string.Empty;
+        LISColumnDragAndDropMapping.Location = string.Empty;
+        LISColumnDragAndDropMapping.ResultTime = string.Empty;
+    }
+
+    private void OnDrop(string data, ConfigLisField zone)
+    {
+        LISColumnDragAndDropMapping.AssignLISFileData(data, zone);
+        StateHasChanged();
+    }
+
+    public async Task OnInputFileChange(InputFileChangeEventArgs e)  
+    {  
+        var singleFile = e.File;  
+
+        var regex = new Regex(".+\\.csv", RegexOptions.Compiled);  
+        if (!regex.IsMatch(singleFile.Name))  
+        {
+            WarningPopupVisible = true;
+            return;
+        }
+
+        CsvFile = singleFile;
+
+        var IsexistingFile = await CheckExistingLISFile(singleFile.Name);
+        if (IsexistingFile)
+        {
+            NotePopupVisible = true;
+            return;
+        }
+
+        var csv = await ParseCSVFile(singleFile);
+        await MakeDemandFileColumnMappingData(csv, singleFile.Name);
+    }
+
+    private async Task<List<string[]>> ParseCSVFile(IBrowserFile file)
+    {
+        var stream = file.OpenReadStream();  
+        var csv = new List<string[]>();  
+        var ms = new MemoryStream();  
+        await stream.CopyToAsync(ms);  
+        stream.Close();  
+        var outputFileString = System.Text.Encoding.UTF8.GetString(ms.ToArray());  
+
+        foreach (var item in outputFileString.Split(Environment.NewLine))  
+        {  
+            csv.Add(SplitCSV(item.ToString()));  
+        }
+
+        return csv;
+    }
+
+    private async Task<bool> CheckExistingLISFile(string fileName)
+    {
+        var files = await services.GetAllDemandLisFilesAsync();
+        var isExisting = files.Contains(fileName);
+        return isExisting;
+    }
+
+    private string[] SplitCSV(string input)  
+    {  
+        var csvSplit = new Regex("(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)", RegexOptions.Compiled);
+        var list = new List<string>();  
+        string curr = null;  
+        foreach (Match match in csvSplit.Matches(input))  
+        {  
+            curr = match.Value;  
+            if (0 == curr.Length)  list.Add(""); 
+
+            list.Add(curr.TrimStart(','));  
+        }  
+
+        return list.ToArray();  
+    }
+
+    private async Task MakeDemandFileColumnMappingData(List<string[]> list, string fileName)
+    {
+        if (!list.Any())
+            return;
+
+        var mappingList = new List<CsvDataViewModel>();
+        var headers = list.First();
+        var columnCount = headers.Length;
+        list.Remove(headers);
+
+        var newList = new List<string[]>();
+        foreach(var item in list)
+        {
+            if (item == null || item.Length != columnCount)
+                continue;
+
+            newList.Add(item);
+        }
+
+        for(var i = 0; i < columnCount - 1; i++)
+        {
+            var header = headers[i];
+            if (string.IsNullOrEmpty(header))
+                continue;
+
+            var dataList = newList.Select(x => x[i]).Distinct().Where(x => !string.IsNullOrEmpty(x)).ToList();
+            var data = String.Join(",", dataList.ToArray());
+            var mappingData = new CsvDataViewModel
+                {
+                    Index = i,
+                    Header = header,
+                    Data = data
+                };
+
+            mappingList.Add(mappingData);
+        }
+
+        if (!mappingList.Any())
+            return;
+
+        await SaveFileColumnMappingData(mappingList, fileName);
+    }
+
+    private async Task SaveFileColumnMappingData(List<CsvDataViewModel> list, string fileName)
+    {
+        var lisFileHeader = string.Join(",", list.Select(l => l.Header).ToArray());
+
+        var lisDataPostViewModel = new LISDataPostViewModel
+        {
+            UserId = UserId,
+            FileName = fileName,
+            LISFileHeader = lisFileHeader,
+            CustomerId = CustomerId,
+            ScenarioId = ScenarioId,
+            csvDataList = list
+        };
+
+        var success = await services.SaveActionAsync(lisDataPostViewModel);
+        if (success)
+            await UpdateLISFileSelectionPanel();
+    }
+
+    private async Task UpdateLISFileSelectionPanel()
+    {
+        var lisFileAndColumnMappings = await services.GetLISFileAndColumnMappingsAsync(UserId, CustomerId);
+        LISFileAndColumnMappingList = lisFileAndColumnMappings.OrderByDescending(x => x.Id).ToList();
+        SelectedLISFile = LISFileAndColumnMappingList.FirstOrDefault();
+        FileColumnMappings = SelectedLISFile.DemandFileColumnMappings.ToList();
+        UpdateModelFields(FileColumnMappings);
+    }
+
+    private async void ProcessHeaderData()
+    {
+        var date = LISColumnDragAndDropMapping.Date.ToGetHeader();
+        var time = LISColumnDragAndDropMapping.Time.ToGetHeader();
+        var sampleId = LISColumnDragAndDropMapping.SampleID.ToGetHeader();
+        var assayCode = LISColumnDragAndDropMapping.AssayCode.ToGetHeader();
+        var specimenType = LISColumnDragAndDropMapping.SpecimenType.ToGetHeader();
+        var priority = LISColumnDragAndDropMapping.Priority.ToGetHeader();
+        var location = LISColumnDragAndDropMapping.Location.ToGetHeader();
+        var resultTime = LISColumnDragAndDropMapping.ResultTime.ToGetHeader();
+
+        var fileColumnMappings = FileColumnMappings;
+        foreach(var f in fileColumnMappings)
+        {
+            if (f.columnNumber == date)
+                f.fldId = (int)ConfigLisField.Date;
+            if (f.columnNumber == time)
+                f.fldId = (int)ConfigLisField.Time;
+            if (f.columnNumber == sampleId)
+                f.fldId = (int)ConfigLisField.SampleID;
+            if (f.columnNumber == assayCode)
+                f.fldId = (int)ConfigLisField.AssayCode;
+            if (f.columnNumber == specimenType)
+                f.fldId = (int)ConfigLisField.SpecimenType;
+            if (f.columnNumber == priority)
+                f.fldId = (int)ConfigLisField.Priority;
+            if (f.columnNumber == location)
+                f.fldId = (int)ConfigLisField.Location;
+            if (f.columnNumber == resultTime)
+                f.fldId = (int)ConfigLisField.ResultTime;
+        }
+
+        await services.UpdateFileColumnMappingAsync(fileColumnMappings);
+    }
+
+    private async void Overwrite()
+    {
+        NotePopupVisible = false;
+        var csv = await ParseCSVFile(CsvFile);
+        await MakeDemandFileColumnMappingData(csv, CsvFile.Name);
+    }
+
+    private void Test()
+    {
+        List<DemandFileColumnMapping> data = new List<DemandFileColumnMapping>();
+        var item1 = new DemandFileColumnMapping
+            {
+                colMappingId = 40,
+                scenarioId = 50,
+                lisSetId = 5,
+                columnNumber = 0,
+                unmappedColumn = "Time",
+                exampleData = "12,15,45",
+                fldId = null
+            };
+
+        var item2 = new DemandFileColumnMapping
+            {
+                colMappingId = 41,
+                scenarioId = 50,
+                lisSetId = 5,
+                columnNumber = 0,
+                unmappedColumn = "TestId",
+                exampleData = "44444444,66666,999",
+                fldId = null
+            };
+
+        data.Add(item1); data.Add(item2);
+
+        var record = new LISFileAndColumnMappingViewModel
+            {
+                Id = 5,
+                UserId = 2,
+                FileName = "test.csv",
+                LISFileHeader = "Time,TestId",
+                CustomerId = 10,
+                DemandFileColumnMappings = data
+            };
+
+        LISFileAndColumnMappingList.Insert(0, record);
+    }
+}

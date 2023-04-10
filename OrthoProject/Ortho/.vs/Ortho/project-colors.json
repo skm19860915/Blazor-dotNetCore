@@ -1,0 +1,31 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "0b6770a0-f9cc-481e-aba2-c55db3b2d930": {
+      "ProjectGuid": "0b6770a0-f9cc-481e-aba2-c55db3b2d930",
+      "DisplayName": "Ortho.Client",
+      "ColorIndex": 0
+    },
+    "20d99134-b2b4-468f-bce2-fb96b205ed1c": {
+      "ProjectGuid": "20d99134-b2b4-468f-bce2-fb96b205ed1c",
+      "DisplayName": "Ortho.Server",
+      "ColorIndex": 1
+    },
+    "46884fcc-a1b6-4617-9dcd-1584f91bc726": {
+      "ProjectGuid": "46884fcc-a1b6-4617-9dcd-1584f91bc726",
+      "DisplayName": "Ortho.Shared",
+      "ColorIndex": 2
+    },
+    "a599d316-0376-4072-926a-f4538e41d45a": {
+      "ProjectGuid": "a599d316-0376-4072-926a-f4538e41d45a",
+      "DisplayName": "Ortho.BusinessLogic",
+      "ColorIndex": 3
+    },
+    "a2fe74e1-b743-11d0-ae1a-00a0c90fffc3": {
+      "ProjectGuid": "a2fe74e1-b743-11d0-ae1a-00a0c90fffc3",
+      "DisplayName": "Miscellaneous Files",
+      "ColorIndex": -1
+    }
+  },
+  "NextColorIndex": 4
+}

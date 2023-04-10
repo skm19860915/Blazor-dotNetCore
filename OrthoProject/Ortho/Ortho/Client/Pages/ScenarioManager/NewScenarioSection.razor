@@ -1,0 +1,149 @@
+﻿@using Ortho.Shared.ViewModels
+@using Ortho.Shared.Models
+@using System
+
+<style>
+    .app-user-combo input{
+        background-color:white !important;
+    }
+</style>
+<div class="card">
+    <div class="card-header">
+        <h6 class="m-2 text-white">New Scenario</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label for="scenario type">Scenario Type: </label>
+                    <DxComboBox Data="@ConfigScenarioTypeList" TextFieldName="@nameof(ConfigScenarioType.scenarioType)"
+                        @bind-Value="@CurrentScenarioType" ReadOnly="true" />
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label for="creation date">Creation Date:</label>
+                    <DxDateEdit Date="NewScenarioData.CreationDate" DateChanged="@((DateTime creationDate) => OnDateChanged(creationDate))" />
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label for="creation date">Owner:</label>
+                    <DxComboBox Data="@AppUserList" TextFieldName="@nameof(AppUserViewModel.Name)" Value="NewScenarioData.Owner"
+                        CssClass="app-user-combo" SelectedItemChanged="@((AppUserViewModel appuser) => SelectedAppUser(appuser))" />
+                </div>
+            </div>
+             <div class="col-sm-3">
+                <div class="form-group">
+                    <label for="creation date">Scenario Nickname:</label>
+                    <DxTextBox @bind-Text="@NewScenarioData.ScenarioNickName" @oninput="GetChangedNickName" />
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="form-group">
+                    <label for="scenario type">Customer Name: </label>
+                    <DxTextBox @bind-Text="@NewScenarioData.CustomerName" @oninput="GetChangedCustomerName" />
+                </div>
+            </div>
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label for="creation date">SFDC Number:</label>
+                    <DxTextBox @bind-Text="@NewScenarioData.SFDCNumber" @oninput="GetChangedSFDCNumber" />
+                </div>
+            </div>
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label for="creation date">City:</label>
+                    <DxTextBox @bind-Text="@NewScenarioData.City" @oninput="GetChangedCity" />
+                </div>
+            </div>
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label for="creation date">State/Province:</label>
+                    <DxTextBox @bind-Text="@NewScenarioData.State" @oninput="GetChangedState" />
+                </div>
+            </div>
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label for="creation date">Country:</label>
+                    <DxTextBox @bind-Text="@NewScenarioData.Country" @oninput="GetChangedCountry" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public NewScenarioViewModel NewScenarioData { get; set; }
+    [Parameter]
+    public ConfigScenarioType CurrentScenarioType{ get; set; }
+    [Parameter]
+    public IEnumerable<ConfigScenarioType> ConfigScenarioTypeList{ get; set; }
+    [Parameter]
+    public IEnumerable<AppUserViewModel> AppUserList{ get; set; }
+    [Parameter]
+    public EventCallback<DateTime> GetChangedCreationDateCallback{ get; set; }
+    [Parameter]
+    public EventCallback<AppUserViewModel> GetChangedAppUserCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedNickNameCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedCustomerNameCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedSFDCNumberCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedCityCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedStateCallback{ get; set; }
+    [Parameter]
+    public EventCallback<string> GetChangedCountryallback{ get; set; }
+
+    private async void OnDateChanged(DateTime creationDate)
+    {
+        await GetChangedCreationDateCallback.InvokeAsync(creationDate);
+    }
+
+    private async void SelectedAppUser(AppUserViewModel appUser)
+    {
+        await GetChangedAppUserCallback.InvokeAsync(appUser);
+    }
+
+    private async void GetChangedNickName(ChangeEventArgs e)
+    {
+        var nickName = e.Value.ToString();
+        await GetChangedNickNameCallback.InvokeAsync(nickName);
+    }
+
+    private async void GetChangedCustomerName(ChangeEventArgs e)
+    {
+        var customerName = e.Value.ToString();
+        await GetChangedCustomerNameCallback.InvokeAsync(customerName);
+    }
+
+    private async void GetChangedSFDCNumber(ChangeEventArgs e)
+    {
+        var sfdcNumber = e.Value.ToString();
+        await GetChangedSFDCNumberCallback.InvokeAsync(sfdcNumber);
+    }
+
+    private async void GetChangedCity(ChangeEventArgs e)
+    {
+        var city = e.Value.ToString();
+        await GetChangedCityCallback.InvokeAsync(city);
+    }
+
+    private async void GetChangedState(ChangeEventArgs e)
+    {
+        var state = e.Value.ToString();
+        await GetChangedStateCallback.InvokeAsync(state);
+    }
+
+    private async void GetChangedCountry(ChangeEventArgs e)
+    {
+        var country = e.Value.ToString();
+        await GetChangedCountryallback.InvokeAsync(country);
+    }
+}
